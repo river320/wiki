@@ -1,0 +1,157 @@
+### 性能统计指标-1-统计总耗时&每秒处理能力
+var tables = ['', ""];
+var startTime = '20221022101010123456';
+var endTime = '20241022101010123456';
+var operators = ['r', 'c', 'u', 'd'];
+var buffer = 0.05;
+var query = {
+    'sequence': {
+        $gte: startTime,
+        $lte: endTime
+    },
+    'operation': {
+        $in: operators
+    }
+};
+var field = {
+    'transactionalTime': 1,
+    'captureTime': 1,
+    'pulsarSink': 1,
+    'receiveMqTime': 1,
+    'receiveOutTime': 1
+};
+var results = [];
+for (var i = 0; i < tables.length; i++) {
+    var collectionName = tables[i];
+    var queryCount = db.getCollection(collectionName).count(query);
+    var last = db.getCollection(collectionName).find(query, field).sort({
+        'sequence': - 1
+    }).limit(1);
+    var first = db.getCollection(collectionName).find(query, field).sort({
+        'sequence': 1
+    }).limit(1);
+    
+    var lastVar = last.toArray()[0];
+    var fisrtVar = first.toArray()[0];
+    
+    var lastCaptureTime = lastVar.captureTime;
+    var firstTransactionalTime = fisrtVar.transactionalTime;
+    
+    var lastPulsarSink = lastVar.pulsarSink;
+    var fisrtCaptureTime = fisrtVar.captureTime;
+    
+    var lastReceiveMqTime = lastVar.receiveMqTime;
+    var fisrtPulsarSink = fisrtVar.pulsarSink;
+    var lastReceiveOutTime = lastVar.receiveOutTime;
+    var fisrtReceiveMqTime = fisrtVar.receiveMqTime;
+    
+    var totalTime1 = (lastCaptureTime - firstTransactionalTime) / 1000;
+    var totalTime2 = (lastPulsarSink - fisrtCaptureTime) / 1000;
+    var totalTime3 = (lastReceiveMqTime - fisrtPulsarSink) / 1000;
+    var totalTime4 = (lastReceiveOutTime - fisrtReceiveMqTime) / 1000 + buffer;
+    var result = totalTime1 + "," + (queryCount /(totalTime1)) + "," + totalTime2 + "," + (queryCount /(totalTime2)) + "," + totalTime3 + "," + (queryCount /(totalTime3)) + "," + totalTime4 + "," + (queryCount /(totalTime4));
+    results[i] = result;
+}
+results;
+
+
+
+ 
+###  性能统计指标-2-延迟统计,使用ES的就行
+var tables = ["",""];
+var startTime = '20221022101010123456';
+var endTime = '20241022101010123456';
+var operators = ['r', 'c', 'u', 'd']; 
+
+var results =[];
+for (var i = 0; i < tables.length; i++) {
+  var collectionName = tables[i];
+	var latency = db.getCollection(collectionName).aggregate(
+    {
+        $match: {
+            'sequence': {
+                $gte: startTime,
+                $lte: endTime
+            },
+            'operation': {
+                $in: operators
+            }
+        }
+    },
+    {
+        $project: {
+            _id: '$tableName',
+            logMinerToFlink: {
+                $add: [{
+                    $subtract: ["$captureTime", "$transactionalTime"]
+                }]
+            },
+            flinkToMq: {
+                $add: [{
+                    $subtract: ["$pulsarSink", "$captureTime"]
+                }]
+            },
+            mqToDpm: {
+                $add: [{
+                    $subtract: ["$receiveMqTime", "$pulsarSink"]
+                }]
+            },
+            dpmToDb: {
+                $add: [{
+                    $subtract: ["$receiveOutTime", "$receiveMqTime"]
+                }]
+            }
+        }
+    },
+    {
+        $group: {
+            _id: "$_id",
+            logMinerToFlink_max_ms: {
+                $max: '$logMinerToFlink'
+            },
+            logMinerToFlink_min_ms: {
+                $min: '$logMinerToFlink'
+            },
+            logMinerToFlink_avg_ms: {
+                $avg: '$logMinerToFlink'
+            },
+            flinkToMq_max_ms: {
+                $max: '$flinkToMq'
+            },
+            flinkToMq_min_ms: {
+                $min: '$flinkToMq'
+            },
+            flinkToMq_avg_ms: {
+                $avg: '$flinkToMq'
+            },
+            mqToDpm_max_ms: {
+                $max: '$mqToDpm'
+            },
+            mqToDpm_min_ms: {
+                $min: '$mqToDpm'
+            },
+            mqToDpm_avg_ms: {
+                $avg: '$mqToDpm'
+            },
+            dpmToDb_max_ms: {
+                $max: '$dpmToDb'
+            },
+            dpmToDb_min_ms: {
+                $min: '$dpmToDb'
+            },
+            dpmToDb_avg_ms: {
+                $avg: '$dpmToDb'
+            }
+        }
+    }
+);
+var record =  latency.toArray()[0];
+var temp = record._id+","+record.logMinerToFlink_max_ms+","+record.logMinerToFlink_min_ms+","+record.logMinerToFlink_avg_ms
++","+record.flinkToMq_max_ms+","+record.flinkToMq_min_ms+","+record.flinkToMq_avg_ms
++","+record.mqToDpm_max_ms+","+record.mqToDpm_min_ms+","+record.mqToDpm_avg_ms
++","+record.dpmToDb_max_ms+","+record.dpmToDb_min_ms+","+record.dpmToDb_avg_ms
+;
+results[i]=temp;
+   
+}
+ results;
