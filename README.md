@@ -8,3 +8,4 @@ this is test
 5. 分别把3段替换为#
 6.数据复制到excel中，按#分列
 
+https://toolgg.com/json2csv/
