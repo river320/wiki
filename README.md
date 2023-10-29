@@ -9,3 +9,9 @@ this is test
 6.数据复制到excel中，按#分列
 
 https://toolgg.com/json2csv/
+
+
+df -h
+	du -sh .
+	du -sh *
+	watch du -s .
