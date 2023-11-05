@@ -1,0 +1,79 @@
+### 一、停止flink 采集JOB 
+1. admin前端停止flink 采集job 
+2. flink后端http://10.10.100.12:8081/ ,点击左侧 Running Jobs 菜单，再次确认JOB在跑，-> flink 采集JOB 停止完成
+
+### 二、验证trigger的正确性
+1.访问 http://10.10.100.233:7007/trigger/doc.html#/home 
+2.点击左侧菜单"暂停消费测试queueu的数据"
+3.点击"调试" 
+4.点击发送
+5.打开oracle 对应的dbevaer 客户端
+6.执行下面sql 
+
+SELECT
+	trigger_name,
+	table_name,
+	trigger_type,
+	'ALTER TRIGGER ' || owner || '.' || trigger_name || ' disable;' AS DISABLE_SQL,
+	'ALTER TRIGGER ' || owner || '.' || trigger_name || ' enable;' AS ENABLE_SQL
+FROM
+	all_triggers
+WHERE
+	owner = 'POC_RTD'
+ORDER BY
+	table_name,
+	trigger_name;
+	
+7.	选中ENABLE_SQL这一列的查询结果，新开一个窗口执行，全选sql，点击第4个按钮执行
+8.  点击dbaver左边菜单，查看表触发器状态
+9.  检查queueu表数据
+SELECT count(*) FROM IPF_QUEUE_A UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_B UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_C UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_D UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_E UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_F UNION ALL 
+SELECT count(*) FROM IPF_QUEUE_G;
+
+10. 如果有数据，先清空queue表
+TRUNCATE TABLE IPF_QUEUE_A;
+TRUNCATE TABLE IPF_QUEUE_B;
+TRUNCATE TABLE IPF_QUEUE_C;
+TRUNCATE TABLE IPF_QUEUE_D;
+TRUNCATE TABLE IPF_QUEUE_E;
+TRUNCATE TABLE IPF_QUEUE_F;
+TRUNCATE TABLE IPF_QUEUE_G;
+
+11. 验证trigger是否OK,开启打增量数据任务，跑5分钟之后查询
+SELECT  table_name,count(*) FROM  (
+SELECT DISTINCT  table_name,IPF_HEADER FROM IPF_QUEUE_A iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_B iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_C iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_D iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_E iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_F iqa UNION ALL 
+SELECT DISTINCT  table_name,IPF_HEADER  FROM IPF_QUEUE_G iqa )  t   GROUP BY table_name
+ORDER BY table_name, count(*) asc;
+ 
+12. 停止增量数据任务
+13.清空queue表数据
+14. 恢复消费queue数据
+{
+  "queueNames": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G"
+  ]
+}
+
+15.开启增量12小时测试
+
+
+
+
+	
+	
