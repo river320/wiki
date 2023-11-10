@@ -39,3 +39,7 @@ ExecStart=/opt/zulu17.42.21-ca-crac-jdk17.0.7-linux_x64/bin/java -DMBF_FILE_PATH
 -DEXTRACTOR_BASE_URL=http://10.10.100.233:7012 -DADAPTER_BASE_URL=http://10.10.100.233:7007 
 
 ExecStart=/opt/zulu17.42.21-ca-crac-jdk17.0.7-linux_x64/bin/java -DPULSAR_IP=pulsar://10.10.100.12:6650 -DSERVER_PORT=7012 -DPULSAR_NAMESPACE=default -DPULSAR_CLUSTER_NAME=public -DADMIN_BASEURL=http://10.10.101.200:7001/admin -DIPF_EXTRACTOR_EVENT_TOPIC=IPF_EXTRACTOR_EVENT_TOPIC_TEST -jar /opt/ipf/mycim4-ipf-extractor/mycim4-ipf-extract-1.0.0-SNAPSHOT-exec.jar
+
+
+
+/opt/zulu17.42.21-ca-crac-jdk17.0.7-linux_x64/bin/java -DPULSAR_IP=pulsar://10.10.100.12:6650 -DSERVER_PORT=7012 -DPULSAR_NAMESPACE=default -DPULSAR_CLUSTER_NAME=public -DADMIN_BASEURL=http://10.10.101.209:7001/admin -DIPF_EXTRACTOR_EVENT_TOPIC=IPF_EXTRACTOR_EVENT_TOPIC_TEST -jar /opt/ipf/mycim4-ipf-extractor/mycim4-ipf-extract-1.0.0-SNAPSHOT-exec.jar
