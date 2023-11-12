@@ -1,3 +1,5 @@
+-DDATA_SWITCH=ON -DDATA_USER_NAME=OMS_NEW_2 -DDATA_PWD=mycIMstrs -DORDER_SWITCH=ON
+
 /opt/zulu17.42.21-ca-crac-jdk17.0.7-linux_x64/bin/java -DMONGODB_URL=mongodb://livedb_admin:admin1234@10.10.101.214:27017/ipf -DADMIN_URL=http://10.10.101.209:7001/admin -DPULSAR_IP=pulsar://10.10.100.228:6650 -DPULSAR_NAMESPACE=default -DPULSAR_CLUSTER_NAME=ipf -DFAM_EVENT_TOPIC=IPF_FAM_EVENT_TOPIC_TEST -DUPLOAD_FOLDER=/data/CACHE -jar /opt/ipf/mycim4-ipf-repository/mycim4-ipf-repository-1.0.0-SNAPSHOT-exec.jar
 
 ExecStart=/opt/zulu17.42.21-ca-crac-jdk17.0.7-linux_x64/bin/java -DMONGODB_URL=mongodb://livedb_admin:admin1234@10.10.101.214:27017/ipf -DADMIN_URL=http://10.10.101.209:7001/admin -DPULSAR_IP=pulsar://10.10.100.228:6650 -DPULSAR_NAMESPACE=default -DPULSAR_CLUSTER_NAME=ipf -DFAM_EVENT_TOPIC=IPF_FAM_EVENT_TOPIC_TEST -DUPLOAD_FOLDER=/data/CACHE -jar /opt/ipf/mycim4-ipf-repository/mycim4-ipf-repository-1.0.0-SNAPSHOT-exec.jar
