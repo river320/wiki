@@ -1,0 +1,113 @@
+/** 要查询的表名  */
+var tables = ["FABMARKLOT", "FABRCPRECIPECHAMBERFLOW", "ddddd"];
+/** 开始时间 yyyyMMddHHmmssSSSSSS*/
+var startTime = '20231206000000000000';
+/** 结束时间 yyyyMMddHHmmssSSSSSS*/
+var endTime = '20231207000000000000';
+/** 操作类型 r、c、u、d 按需输入*/
+var operators = ['c', 'u', 'd'];
+/** 查询的表的schema,如果表归属与不同的schema,此次为空,上面的入参tables改为全字段命名风格*/
+var schema = 'OMS_NEW_2';
+var results = [];
+for (var i = 0; i < tables.length; i++) {
+    var collectionName = tables[i];
+    var log_name = schema + '_' + collectionName + '_LOG';
+    var latency = db.getCollection(log_name).aggregate(
+        {
+            $match: {
+                'sequence': {
+                    $gte: startTime,
+                    $lte: endTime
+                },
+                'operation': {
+                    $in: operators
+                }
+            }
+        },
+        {
+            $project: {
+                _id: '$tableName',
+                triggerToAdapter: {
+                    $add: [{
+                        $subtract: ["$captureTime", "$transactionalTime"]
+                    }]
+                },
+                adapterToMq: {
+                    $add: [{
+                        $subtract: ["$pulsarSink", "$captureTime"]
+                    }]
+                },
+                mqToDpm: {
+                    $add: [{
+                        $subtract: ["$receiveMqTime", "$pulsarSink"]
+                    }]
+                },
+                dpmToDb: {
+                    $add: [{
+                        $subtract: ["$receiveOutTime", "$receiveMqTime"]
+                    }]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: "$_id",
+                triggerToAdapter_max_ms: {
+                    $max: '$triggerToAdapter'
+                },
+                triggerToAdapter_min_ms: {
+                    $min: '$triggerToAdapter'
+                },
+                triggerToAdapter_avg_ms: {
+                    $avg: '$triggerToAdapter'
+                },
+                adapterToMq_max_ms: {
+                    $max: '$adapterToMq'
+                },
+                adapterToMq_min_ms: {
+                    $min: '$adapterToMq'
+                },
+                adapterToMq_avg_ms: {
+                    $avg: '$adapterToMq'
+                },
+                mqToDpm_max_ms: {
+                    $max: '$mqToDpm'
+                },
+                mqToDpm_min_ms: {
+                    $min: '$mqToDpm'
+                },
+                mqToDpm_avg_ms: {
+                    $avg: '$mqToDpm'
+                },
+                dpmToDb_max_ms: {
+                    $max: '$dpmToDb'
+                },
+                dpmToDb_min_ms: {
+                    $min: '$dpmToDb'
+                },
+                dpmToDb_avg_ms: {
+                    $avg: '$dpmToDb'
+                }
+            }
+        }
+    );
+
+    if (latency != null) {
+        var record = latency.toArray()[0];
+        var temp = record._id + "," + record.triggerToAdapter_max_ms + "," + record.triggerToAdapter_min_ms + "," + record.triggerToAdapter_avg_ms
+            + "," + record.adapterToMq_max_ms + "," + record.adapterToMq_min_ms + "," + record.adapterToMq_avg_ms
+            + "," + record.mqToDpm_max_ms + "," + record.mqToDpm_min_ms + "," + record.mqToDpm_avg_ms
+            + "," + record.dpmToDb_max_ms + "," + record.dpmToDb_min_ms + "," + record.dpmToDb_avg_ms
+            ;
+        results[i] = temp;
+    }
+}
+results;
+
+/** 查询结果, 对应的列名分别是:
+表名、
+triggerToAdapter_max_ms、triggerToAdapter_min_ms、triggerToAdapter_avg_ms、
+adapterToMq_max_ms、adapterToMq_min_ms、adapterToMq_avg_ms、
+mqToDpm_max_ms、mqToDpm_min_ms、 mqToDpm_avg_ms、
+dpmToDb_max_ms、dpmToDb_min_ms、dpmToDb_avg_ms */ 
+  
