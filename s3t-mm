@@ -1,5 +1,5 @@
 /** 要查询的表名  */
-var tables = ["FABMARKLOT", "FABRCPRECIPECHAMBERFLOW", "ddddd"];
+var tables = ["", "", ""];
 /** 开始时间 yyyyMMddHHmmssSSSSSS*/
 var startTime = '20231206000000000000';
 /** 结束时间 yyyyMMddHHmmssSSSSSS*/
