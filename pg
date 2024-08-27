@@ -1,0 +1,116 @@
+-- 全量统计,修改表名+预估延迟(1秒)
+select
+	t3."count",
+	t4."Extractor->MQ",
+	t3."count" / t4."Extractor->MQ" as "TPS",
+	t4."MQ->DPM",
+	t4."DPM+IPFDB",
+	t4."总计",
+	t3."count" / t4."总计" as "总计_TPS"
+from
+	(
+	select
+		("lastPulsarSink" - "fisrtCaptureTime")/ 1000 as "Extractor->MQ",
+		("lastReceiveMqTime" - "fisrtPulsarSink")/ 1000 as "MQ->DPM",
+		("lastReceiveOutTime" - "fisrtReceiveMqTime")/ 1000 + 1 as "DPM+IPFDB",
+		("lastReceiveOutTime" - "fisrtCaptureTime")/ 1000 + 1 as "总计",
+		'ID' as "ID"
+	from
+		(
+		-- 最后一条
+		select
+			"IPF_PULSAR_SINK" as "lastPulsarSink",
+			"IPF_RECEIVE_MQ_TIME" as "lastReceiveMqTime",
+			"IPF_RECEIVE_OUT_TIME" as "lastReceiveOutTime",
+			'ID' as "ID"
+		from
+			"OMS_NEW_2_FWPRODUCTVERSION_N2M_LOG"
+		where
+			"IPF_OPERATION" = 'r'
+		order by
+			"IPF_PULSAR_SINK" desc ,
+			"IPF_CAPTURE_TIME" desc
+		limit 1 ) t1
+	join (
+		-- 第一条
+		select
+			"IPF_CAPTURE_TIME" as "fisrtCaptureTime",
+			"IPF_PULSAR_SINK" as "fisrtPulsarSink",
+			"IPF_RECEIVE_MQ_TIME" as "fisrtReceiveMqTime",
+			'ID' as "ID"
+		from
+			"OMS_NEW_2_FWPRODUCTVERSION_N2M_LOG"
+		where
+			"IPF_OPERATION" = 'r'
+		order by
+			"IPF_CAPTURE_TIME" asc,
+			"IPF_PULSAR_SINK" asc
+		limit 1 ) t2
+on
+		t1."ID" = t2."ID" ) t4
+join (
+	-- 总条数
+	select
+		count(*) as "count",
+		'ID' as "ID"
+	from
+		"OMS_NEW_2_FWPRODUCTVERSION_N2M_LOG"
+	where
+		"IPF_OPERATION" = 'r'
+	) t3 on
+	t4."ID" = t3."ID" ;
+
+
+-- 增量指标统计,修改表名、增量数据开始时间和结束时间即可,结束时间在实际结束时间上多加5分钟、预估延迟(基于ES,ES平均是15就加15,当前sql写的15,不同表不一样)
+
+select
+	'OMLOT',
+
+	COUNT(*) as "Count",
+	max("QueueTime") as "QueueTime_MAX",
+	min("QueueTime") as "QueueTime_MIN",
+	avg("QueueTime") as "QueueTime_AVG",
+	
+	max("AdapterRunningTime")as "AdapterRunningTime_MAX",
+	min("AdapterRunningTime") as "AdapterRunningTime_MIN",
+	avg("AdapterRunningTime") as "AdapterRunningTime_AVG",
+	
+	max("PulsarExcutionTime") as "PulsarExcutionTime_MAX",
+	min("PulsarExcutionTime") as "PulsarExcutionTime_MIN",
+	avg("PulsarExcutionTime")as "PulsarExcutionTime_AVG",
+	
+	max("PersistenceTime")as "PersistenceTime_MAX",
+	min("PersistenceTime")as "PersistenceTime_MIN",
+	
+	avg("PersistenceTime")as "PersistenceTime_AVG",
+	
+	max("Total") as "Total_MAX",
+	min("Total") as "Total_MIN",
+	avg("Total")as "Total_AVG",
+	percentile_cont(0.95) within group (
+order by
+	"Total" asc) as "Total_P95",
+	percentile_cont(0.99) within group (
+order by
+	"Total" asc) as "Total_P99"
+from
+	(
+	select
+		"IPF_SCHEMA" as "IPF_SCHEMA",
+		"IPF_TABLE_NAME" as "IPF_TABLE_NAME",
+		"IPF_CAPTURE_TIME" - "IPF_TRANSACTIONAL_TIME" as "QueueTime",
+		"IPF_PULSAR_SINK" - "IPF_CAPTURE_TIME" as "AdapterRunningTime",
+		"IPF_RECEIVE_MQ_TIME"-"IPF_PULSAR_SINK" as "PulsarExcutionTime",
+		("IPF_RECEIVE_OUT_TIME" - "IPF_RECEIVE_MQ_TIME")+ 15 as "PersistenceTime",
+		("IPF_RECEIVE_OUT_TIME" - "IPF_TRANSACTIONAL_TIME") + 15 as "Total",
+		t.*
+	from
+		"OMS_STRESS_OMLOT_LOG" t
+	where
+		t."IPF_OPERATION" in ('c', 'u', 'd')
+			and "IPF_SEQUENCE" >= '20240826135000000000'
+			and "IPF_SEQUENCE" <= '20240826155500000000'
+		order by
+			"IPF_SEQUENCE" desc  
+ ) k
+;
