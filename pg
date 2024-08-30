@@ -28,6 +28,8 @@ from
 		where
 			"IPF_OPERATION" = 'r'
 		order by
+			"IPF_RECEIVE_OUT_TIME" desc ,
+			"IPF_RECEIVE_MQ_TIME" desc ,
 			"IPF_PULSAR_SINK" desc ,
 			"IPF_CAPTURE_TIME" desc
 		limit 1 ) t1
@@ -44,7 +46,9 @@ from
 			"IPF_OPERATION" = 'r'
 		order by
 			"IPF_CAPTURE_TIME" asc,
-			"IPF_PULSAR_SINK" asc
+			"IPF_PULSAR_SINK" asc,
+			"IPF_RECEIVE_MQ_TIME" asc ,
+			"IPF_RECEIVE_OUT_TIME" asc
 		limit 1 ) t2
 on
 		t1."ID" = t2."ID" ) t4
