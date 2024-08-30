@@ -1,0 +1,129 @@
+var tool = 'np';
+
+var tables = [
+    'OMS_NEW_2_FABRCDSTEPINFO_LOG',
+    'OMS_NEW_2_FWHOLDRELEASE_LOG',
+    'OMS_NEW_2_FWEQPTYPE_LOG',
+    'OMS_NEW_2_FWPRODUCTVERSION_LOG',
+    'OMS_NEW_2_FABEQPEQUIPMENTCAEXT_LOG',
+    'OMS_NEW_2_FABINQTIMEPROCESS_LOG',
+    'OMS_NEW_2_FWWIPSTEP_LOG',
+    'OMS_NEW_2_FABLOTCARRIEREXT_LOG',
+    'OMS_NEW_2_FABPROCESSPLANEXT_LOG',
+    'OMS_NEW_2_FWEQPEQUIPMENT_LOG',
+    'OMS_NEW_2_FABRUNINFO_LOG',
+    'OMS_NEW_2_FWPRODUCTVERSION_N2M_LOG',
+    'OMS_NEW_2_FABEQPCURRENTSTATEEXT_LOG',
+    'OMS_NEW_2_FWCOMPONENT_LOG',
+    'OMS_NEW_2_FABCROSSFABLOTINFOMID_LOG',
+    'OMS_NEW_2_FABEQPCAPABILITY_LOG',
+    'OMS_NEW_2_FABEQPSEASONPROCESS_LOG',
+    'OMS_NEW_2_FABLOTEXT_LOG',
+    'OMS_NEW_2_FABEQPMONITORPROCESS_LOG',
+    'OMS_NEW_2_FABRCPRECIPE_LOG',
+    'OMS_NEW_2_FABRCPRECIPECHAMBERFLOW_LOG',
+    'OMS_NEW_2_FABRUNWAFERCHAMBER_LOG',
+    'OMS_NEW_2_FABTRACKINGQUEUE_LOG',
+    'OMS_NEW_2_FWEQPSTATE_LOG',
+    'OMS_NEW_2_FABSTEPVERSION_LOG',
+    'OMS_NEW_2_FABRCDLITHOPARAINFO_LOG',
+    'OMS_NEW_2_FABSTEPVERSIONEXT_LOG',
+    'OMS_NEW_2_FWEQPCURRENTSTATE_LOG',
+    'OMS_NEW_2_FWLOT_LOG',
+    'OMS_NEW_2_FABEQPSTATEEXT_LOG',
+    'OMS_NEW_2_FABRCDLOTLIST_LOG',
+    'OMS_NEW_2_FABRCDWAFERGROUP_N2M_LOG',
+    'OMS_NEW_2_FABEQPRESERVEDOWNCONFIG_LOG',
+    'OMS_NEW_2_FABRCDWAFERGROUP_LOG',
+    'OMS_NEW_2_FABRUNCARD_LOG',
+    'OMS_NEW_2_FABINPILOTPROCESS_LOG',
+    'OMS_NEW_2_FABRCDSTEPSEQINFO_LOG',
+    'OMS_NEW_2_FABRUNCARD_N2M_LOG',
+    'OMS_NEW_2_FABWIPSTEPEXT_LOG',
+    'OMS_NEW_2_FWPROCESSPLAN_LOG'
+];
+
+var startTime = '19700101000000000000';
+var endTime = '19700101000000000000';
+var operators = ['r'];
+var buffer = 1;
+var query = {
+    'sequence': {
+        $gte: startTime,
+        $lte: endTime
+    },
+    'operation': {
+        $in: operators
+    }
+};
+var field = {
+    'transactionalTime': 1,
+    'captureTime': 1,
+    'pulsarSink': 1,
+    'receiveMqTime': 1,
+    'receiveOutTime': 1
+};
+var results = [];
+for (var i = 0; i < tables.length; i++) {
+    var collectionName = tables[i];
+    var queryCount = db.getCollection(collectionName).count(query);
+    var last = db.getCollection(collectionName).find(query, field).sort({
+        'receiveOutTime': - 1,
+        'receiveMqTime': - 1,
+        'pulsarSink': - 1,
+        'captureTime': - 1
+    }).limit(1);
+    var first = db.getCollection(collectionName).find(query, field).sort({
+        'captureTime': 1,
+        'pulsarSink': 1,
+        'receiveMqTime': 1,
+        'receiveOutTime': 1
+    }).limit(1);
+    
+    var lastVar = null;
+    var fisrtVar = null;
+    if (tool == 'np') {
+        // navicat premiun 
+        lastVar = last[0];
+        fisrtVar = first[0];
+    } else {
+        // 3t 
+        lastVar = last.toArray()[0];
+        fisrtVar = first.toArray()[0];
+    }
+    
+    if (lastVar != null&&fisrtVar != null) {
+        var lastCaptureTime = lastVar.captureTime;
+        var firstTransactionalTime = fisrtVar.transactionalTime;
+        
+        var lastPulsarSink = lastVar.pulsarSink;
+        var fisrtCaptureTime = fisrtVar.captureTime;
+        
+        var lastReceiveMqTime = lastVar.receiveMqTime;
+        var fisrtPulsarSink = fisrtVar.pulsarSink;
+        var lastReceiveOutTime = lastVar.receiveOutTime;
+        var fisrtReceiveMqTime = fisrtVar.receiveMqTime;
+        
+        var Extractor_MQ = (lastPulsarSink - fisrtCaptureTime) / 1000;
+        var TPS = queryCount/Extractor_MQ;
+        var MQ_DPM = (lastReceiveMqTime - fisrtPulsarSink) / 1000;
+        var DPM_IPFDB = (lastReceiveOutTime - fisrtReceiveMqTime) / 1000 + buffer;
+        var TOTAL = (lastReceiveOutTime - fisrtCaptureTime) / 1000 + buffer;
+        var TOTAL_TPS = queryCount/TOTAL;
+        
+        var result = collectionName + "," + queryCount + "," + Extractor_MQ + "," + TPS + "," + MQ_DPM + "," + DPM_IPFDB + "," + TOTAL + "," + TOTAL_TPS;
+        results[i] = result;
+    } else {
+        results[i] = collectionName + '无数据';
+    }
+}
+results;
+
+
+
+/** last */
+db.OMS_NEW_2_FABLOTEXT_LOG.find().sort({   'receiveOutTime': - 1,'receiveMqTime': - 1,'pulsarSink': - 1,'captureTime': - 1}).limit(1);
+db.OMS_NEW_2_FABLOTEXT_LOG.find().sort({   'receiveOutTime': - 1,'receiveMqTime': - 1,'pulsarSink': - 1,'captureTime': - 1}).limit(10);
+
+/** fisrt */
+db.OMS_NEW_2_FABLOTEXT_LOG.find().sort({   'captureTime': 1,'pulsarSink': 1,'receiveMqTime': 1,'receiveOutTime': 1}).limit(10);
