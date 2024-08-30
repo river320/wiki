@@ -127,3 +127,183 @@ db.OMS_NEW_2_FABLOTEXT_LOG.find().sort({   'receiveOutTime': - 1,'receiveMqTime'
 
 /** fisrt */
 db.OMS_NEW_2_FABLOTEXT_LOG.find().sort({   'captureTime': 1,'pulsarSink': 1,'receiveMqTime': 1,'receiveOutTime': 1}).limit(10);
+
+
+
+
+
+/** 增量统计 */
+
+var tool = 'np';
+
+var tables = [
+    'OMS_NEW_2_FABRCDSTEPINFO_LOG',
+    'OMS_NEW_2_FWHOLDRELEASE_LOG',
+    'OMS_NEW_2_FWEQPTYPE_LOG',
+    'OMS_NEW_2_FWPRODUCTVERSION_LOG',
+    'OMS_NEW_2_FABEQPEQUIPMENTCAEXT_LOG',
+    'OMS_NEW_2_FABINQTIMEPROCESS_LOG',
+    'OMS_NEW_2_FWWIPSTEP_LOG',
+    'OMS_NEW_2_FABLOTCARRIEREXT_LOG',
+    'OMS_NEW_2_FABPROCESSPLANEXT_LOG',
+    'OMS_NEW_2_FWEQPEQUIPMENT_LOG',
+    'OMS_NEW_2_FABRUNINFO_LOG',
+    'OMS_NEW_2_FWPRODUCTVERSION_N2M_LOG',
+    'OMS_NEW_2_FABEQPCURRENTSTATEEXT_LOG',
+    'OMS_NEW_2_FWCOMPONENT_LOG',
+    'OMS_NEW_2_FABCROSSFABLOTINFOMID_LOG',
+    'OMS_NEW_2_FABEQPCAPABILITY_LOG',
+    'OMS_NEW_2_FABEQPSEASONPROCESS_LOG',
+    'OMS_NEW_2_FABLOTEXT_LOG',
+    'OMS_NEW_2_FABEQPMONITORPROCESS_LOG',
+    'OMS_NEW_2_FABRCPRECIPE_LOG',
+    'OMS_NEW_2_FABRCPRECIPECHAMBERFLOW_LOG',
+    'OMS_NEW_2_FABRUNWAFERCHAMBER_LOG',
+    'OMS_NEW_2_FABTRACKINGQUEUE_LOG',
+    'OMS_NEW_2_FWEQPSTATE_LOG',
+    'OMS_NEW_2_FABSTEPVERSION_LOG',
+    'OMS_NEW_2_FABRCDLITHOPARAINFO_LOG',
+    'OMS_NEW_2_FABSTEPVERSIONEXT_LOG',
+    'OMS_NEW_2_FWEQPCURRENTSTATE_LOG',
+    'OMS_NEW_2_FWLOT_LOG',
+    'OMS_NEW_2_FABEQPSTATEEXT_LOG',
+    'OMS_NEW_2_FABRCDLOTLIST_LOG',
+    'OMS_NEW_2_FABRCDWAFERGROUP_N2M_LOG',
+    'OMS_NEW_2_FABEQPRESERVEDOWNCONFIG_LOG',
+    'OMS_NEW_2_FABRCDWAFERGROUP_LOG',
+    'OMS_NEW_2_FABRUNCARD_LOG',
+    'OMS_NEW_2_FABINPILOTPROCESS_LOG',
+    'OMS_NEW_2_FABRCDSTEPSEQINFO_LOG',
+    'OMS_NEW_2_FABRUNCARD_N2M_LOG',
+    'OMS_NEW_2_FABWIPSTEPEXT_LOG',
+    'OMS_NEW_2_FWPROCESSPLAN_LOG'
+];
+
+/** 全量 是19700101000000000000 */
+var startTime = '19700101000000000000';
+var endTime = '19700101000000000000';
+/** 'r', 'c', 'u', 'd' 按需修改*/
+var operators = ['r'];
+
+var buffer = 15;
+
+var results = [];
+var query = {
+    'sequence': {
+        $gte: startTime,
+        $lte: endTime
+    },
+    'operation': {
+        $in: operators
+    }
+};
+for (var i = 0; i < tables.length; i++) {
+    var collectionName = tables[i];
+    var queryCount = db.getCollection(collectionName).count(query);
+    var latency = db.getCollection(collectionName).aggregate(
+        {
+            $match: {
+                'sequence': {
+                    $gte: startTime,
+                    $lte: endTime
+                },
+                'operation': {
+                    $in: operators
+                }
+            }
+        },
+        {
+            $project: {
+                _id: '$tableName',
+                QueueTime: {
+                    $add: [{
+                        $subtract: ["$captureTime", "$transactionalTime"]
+                    }]
+                },
+                AdapterRunningTime: {
+                    $add: [{
+                        $subtract: ["$pulsarSink", "$captureTime"]
+                    }]
+                },
+                PulsarExcutionTime: {
+                    $add: [{
+                        $subtract: ["$receiveMqTime", "$pulsarSink"]
+                    }]
+                },
+                PersistenceTime: {
+                    $add: [{
+                        $subtract: ["$receiveOutTime", "$receiveMqTime" + buffer]
+                    }]
+                },
+                Total: {
+                    $add: [{
+                        $subtract: ["$receiveOutTime", "$transactionalTime" + buffer]
+                    }]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: "$_id",
+                QueueTime_MAX: {
+                    $max: '$QueueTime'
+                },
+                QueueTime_MIN: {
+                    $min: '$QueueTime'
+                },
+                AdapterRunningTime_AVG: {
+                    $avg: '$QueueTime'
+                },
+                PulsarExcutionTime_MAX: {
+                    $max: '$AdapterRunningTime'
+                },
+                PulsarExcutionTime_MIN: {
+                    $min: '$AdapterRunningTime'
+                },
+                PulsarExcutionTime_AVG: {
+                    $avg: '$AdapterRunningTime'
+                },
+                PersistenceTime_MAX: {
+                    $max: '$PulsarExcutionTime'
+                },
+                PersistenceTime_MIN: {
+                    $min: '$PulsarExcutionTime'
+                },
+                PersistenceTime_AVG: {
+                    $avg: '$PulsarExcutionTime'
+                },
+                PersistenceTime_MAX: {
+                    $max: '$PersistenceTime'
+                },
+                PersistenceTime_MIN: {
+                    $min: '$PersistenceTime'
+                },
+                PersistenceTime_AVG: {
+                    $avg: '$PersistenceTime'
+                },
+                Total_MAX: {
+                    $max: '$Total'
+                },
+                Total_MIN: {
+                    $min: '$Total'
+                },
+                Total_AVG: {
+                    $avg: '$Total'
+                }
+            }
+        }
+    );
+    var record = latency.toArray()[0];
+    if (record != null) {
+        var temp = collectionName + "," + queryCount + "," + record.QueueTime_MAX + "," + record.QueueTime_MIN + "," + record.QueueTime_AVG
+        + "," + record.AdapterRunningTime_MAX + "," + record.AdapterRunningTime_MIN + "," + record.AdapterRunningTime_AVG
+        + "," + record.PulsarExcutionTime_MAX + "," + record.PulsarExcutionTime_MIN + "," + record.PulsarExcutionTime_AVG
+        + "," + record.PersistenceTime_MAX + "," + record.PersistenceTime_MIN + "," + record.PersistenceTime_AVG
+        + "," + record.Total_MAX + "," + record.Total_MIN + "," + record.Total_AVG
+        ;
+        results[i] = temp;
+    } else {
+        results[i] = collectionName + '无数据';
+    }
+}
+results;
