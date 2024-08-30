@@ -232,12 +232,12 @@ for (var i = 0; i < tables.length; i++) {
                 },
                 PersistenceTime: {
                     $add: [{
-                        $subtract: ["$receiveOutTime", "$receiveMqTime" + buffer]
+                        $subtract: ["$receiveOutTime", "$receiveMqTime"]
                     }]
                 },
                 Total: {
                     $add: [{
-                        $subtract: ["$receiveOutTime", "$transactionalTime" + buffer]
+                        $subtract: ["$receiveOutTime", "$transactionalTime"]
                     }]
                 }
             }
@@ -298,8 +298,8 @@ for (var i = 0; i < tables.length; i++) {
         var temp = collectionName + "," + queryCount + "," + record.QueueTime_MAX + "," + record.QueueTime_MIN + "," + record.QueueTime_AVG
         + "," + record.AdapterRunningTime_MAX + "," + record.AdapterRunningTime_MIN + "," + record.AdapterRunningTime_AVG
         + "," + record.PulsarExcutionTime_MAX + "," + record.PulsarExcutionTime_MIN + "," + record.PulsarExcutionTime_AVG
-        + "," + record.PersistenceTime_MAX + "," + record.PersistenceTime_MIN + "," + record.PersistenceTime_AVG
-        + "," + record.Total_MAX + "," + record.Total_MIN + "," + record.Total_AVG
+        + "," + (record.PersistenceTime_MAX + buffer) + "," + (record.PersistenceTime_MIN + buffer) + "," + (record.PersistenceTime_AVG + buffer)
+        + "," + (record.Total_MAX + buffer) + "," + (record.Total_MIN + buffer) + "," + (record.Total_AVG + buffer)
         ;
         results[i] = temp;
     } else {
