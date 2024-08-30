@@ -251,25 +251,25 @@ for (var i = 0; i < tables.length; i++) {
                 QueueTime_MIN: {
                     $min: '$QueueTime'
                 },
-                AdapterRunningTime_AVG: {
+                QueueTime_AVG: {
                     $avg: '$QueueTime'
                 },
-                PulsarExcutionTime_MAX: {
+                AdapterRunningTime_MAX: {
                     $max: '$AdapterRunningTime'
                 },
-                PulsarExcutionTime_MIN: {
+                AdapterRunningTime_MIN: {
                     $min: '$AdapterRunningTime'
                 },
-                PulsarExcutionTime_AVG: {
+                AdapterRunningTime_AVG: {
                     $avg: '$AdapterRunningTime'
                 },
-                PersistenceTime_MAX: {
+                PulsarExcutionTime_MAX: {
                     $max: '$PulsarExcutionTime'
                 },
-                PersistenceTime_MIN: {
+                PulsarExcutionTime_MIN: {
                     $min: '$PulsarExcutionTime'
                 },
-                PersistenceTime_AVG: {
+                PulsarExcutionTime_AVG: {
                     $avg: '$PulsarExcutionTime'
                 },
                 PersistenceTime_MAX: {
