@@ -239,3 +239,8 @@ end;
 
 $function$
 ;
+
+
+
+select * from get_extractor_time(ARRAY['OMS_NEW_2_FWEQPSTATE_LOG','OMS_NEW_2_FWEQPTYPE_LOG']);
+
