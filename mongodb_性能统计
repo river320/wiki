@@ -307,3 +307,95 @@ for (var i = 0; i < tables.length; i++) {
     }
 }
 results;
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** extract 总耗时 最大的lastReceiveOutTime - 最小的fisrtCaptureTime ,总条数,每个表的count相加*/
+var tool = 'np';
+
+var tables = [
+    'OMS_STRS_CCCYYY_LOG',
+    'OMS_TEST02_OMLOT01_LOG'
+];
+
+var operators = ['r'];
+
+
+var buffer = 1;
+var query = {
+    'operation': {
+        $in: operators
+    }
+};
+var field = {
+    'receiveOutTime': 1,
+    'captureTime': 1
+};
+
+var maxLastReceiveOutTime = 0;
+var mixFisrtCaptureTime = 0;
+var totalCount = 0;
+var tableCount = 0;
+var tps = 0;
+var totalMs = 0;
+for (var i = 0; i < tables.length; i++) {
+    var collectionName = tables[i];
+    var queryCount = db.getCollection(collectionName).count(query);
+    var last = db.getCollection(collectionName).find(query, field).sort({
+        'receiveOutTime': - 1,
+        'receiveMqTime': - 1,
+        'pulsarSink': - 1,
+        'captureTime': - 1
+    }).limit(1);
+    var first = db.getCollection(collectionName).find(query, field).sort({
+        'captureTime': 1,
+        'pulsarSink': 1,
+        'receiveMqTime': 1,
+        'receiveOutTime': 1
+    }).limit(1);
+    
+    var lastVar = null;
+    var fisrtVar = null;
+    if (tool == 'np') {
+        // navicat premiun 
+        lastVar = last[0];
+        fisrtVar = first[0];
+    } else {
+        // 3t 
+        lastVar = last.toArray()[0];
+        fisrtVar = first.toArray()[0];
+    }
+    
+    if (lastVar != null&&fisrtVar != null) {
+        
+        var fisrtCaptureTime = fisrtVar.captureTime;
+        var lastReceiveOutTime = lastVar.receiveOutTime;
+        if (mixFisrtCaptureTime == 0 || fisrtCaptureTime < mixFisrtCaptureTime) {
+            mixFisrtCaptureTime = fisrtCaptureTime;
+        }
+        
+        if (maxLastReceiveOutTime == 0 || lastReceiveOutTime > maxLastReceiveOutTime) {
+            maxLastReceiveOutTime = lastReceiveOutTime;
+        }
+    }
+    
+    totalCount = totalCount + queryCount;
+    tableCount = tableCount + 1;
+}
+if (totalCount > 0) {
+    totalTime = (maxLastReceiveOutTime - mixFisrtCaptureTime)/1000;
+    tps = totalCount/totalTime;
+}
+var result = tableCount + "," + totalCount + "," + totalTime + "," + tps + "," + mixFisrtCaptureTime + "," + maxLastReceiveOutTime;
+/** TableCount,TotalCount,TotalTime(秒),Tps,FirstCaptureTime,LastReceiveOutTime*/
+result;
