@@ -118,3 +118,124 @@ from
 			"IPF_SEQUENCE" desc  
  ) k
 ;
+
+
+
+
+
+
+
+create type type_extractor_time as (TableCount numeric,
+TotalCount numeric,
+TotalTime numeric,
+Tps numeric,
+FirstCaptureTime numeric,
+LastReceiveOutTime numeric
+);
+
+
+-- DROP FUNCTION public.get_extractor_time(_text);
+
+CREATE OR REPLACE FUNCTION public.get_extractor_time(mapping_table_names text[])
+ RETURNS type_extractor_time
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+declare r type_extractor_time;
+
+TableCount numeric := 0;
+
+TotalCount numeric := 0;
+
+TotalTime numeric := 0;
+
+Tps numeric := 0;
+
+FirstCaptureTime numeric := 0;
+
+LastReceiveOutTime numeric := 0;
+
+sql text;
+
+count numeric := 0;
+
+CaptureTime numeric := 0;
+
+ReceiveOutTime numeric := 0;
+
+mapping_table_name text;
+
+begin
+	foreach mapping_table_name in array mapping_table_names loop
+		TableCount = TableCount + 1;
+
+execute 'SELECT count(*) FROM ' || quote_ident(mapping_table_name) || ' where "IPF_OPERATION" = ''r'''
+into
+	count;
+
+execute '
+select
+			 
+			 
+			"IPF_RECEIVE_OUT_TIME"  
+			 
+		from
+			' || quote_ident(mapping_table_name) || ' 
+		where
+			"IPF_OPERATION" = ''r''
+		order by
+			"IPF_RECEIVE_OUT_TIME" desc ,
+			"IPF_RECEIVE_MQ_TIME" desc ,
+			"IPF_PULSAR_SINK" desc ,
+			"IPF_CAPTURE_TIME" desc
+		limit 1 '
+into
+	ReceiveOutTime;
+
+if(LastReceiveOutTime = 0
+or ReceiveOutTime > LastReceiveOutTime) then
+		LastReceiveOutTime = ReceiveOutTime;
+end if;
+
+execute '
+select
+			"IPF_CAPTURE_TIME" 
+		from
+			' || quote_ident(mapping_table_name) || ' 
+		where
+			"IPF_OPERATION" = ''r''
+		order by
+			"IPF_CAPTURE_TIME" asc,
+			"IPF_PULSAR_SINK" asc,
+			"IPF_RECEIVE_MQ_TIME" asc ,
+			"IPF_RECEIVE_OUT_TIME" asc
+		limit 1
+'
+into
+	CaptureTime;
+
+if(FirstCaptureTime = 0
+or CaptureTime < FirstCaptureTime) then
+		FirstCaptureTime = CaptureTime;
+end if;
+
+TotalCount = TotalCount + count;
+end loop;
+
+r.TableCount = TableCount;
+
+r.TotalCount = TotalCount;
+
+r.TotalTime = (LastReceiveOutTime-FirstCaptureTime)/1000;
+
+r.Tps = TotalCount/r.TotalTime;
+
+r.FirstCaptureTime = FirstCaptureTime;
+
+r.LastReceiveOutTime = LastReceiveOutTime;
+
+return r;
+end;
+
+$function$
+;
